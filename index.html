@@ -107,6 +107,37 @@
             border: 2px solid #E74C3C;
         }
 
+        .status.connecting {
+            background: rgba(255, 193, 7, 0.2);
+            color: #F39C12;
+            border: 2px solid #F39C12;
+        }
+
+        /* Instruções de conexão */
+        .connection-info {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 600px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .connection-info h4 {
+            color: #1E5A8A;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .connection-info ol {
+            margin-left: 20px;
+        }
+
+        .connection-info li {
+            margin-bottom: 5px;
+        }
+
         /* Container Principal */
         .container {
             max-width: 1200px;
@@ -232,6 +263,25 @@
             color: #F39C12;
         }
 
+        /* Console de dados */
+        .data-console {
+            background: #1E1E1E;
+            color: #00FF00;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .data-console h4 {
+            color: #00BFFF;
+            margin-bottom: 10px;
+            font-family: 'Poppins', sans-serif;
+        }
+
         /* Seções do Projeto */
         .project-section {
             background: white;
@@ -338,14 +388,33 @@
     <header class="header">
         <h1>Bio-Guard</h1>
         <p>Projeto da Feira de Ciências 2025</p>
-        <button class="connect-btn" id="connectBtn">Conectar ao Bio-Guard via Bluetooth</button>
+        <button class="connect-btn" id="connectBtn">Conectar ao ESP32 via Serial</button>
         <div class="status disconnected" id="connectionStatus">Desconectado</div>
+        
+        <!-- Instruções de conexão -->
+        <div class="connection-info">
+            <h4>📋 Como conectar:</h4>
+            <ol>
+                <li>Conecte o ESP32 via cabo USB no computador</li>
+                <li>Clique no botão "Conectar ao ESP32 via Serial"</li>
+                <li>Selecione a porta COM do ESP32 na janela que abrir</li>
+                <li>Aguarde a conexão ser estabelecida</li>
+            </ol>
+            <p><strong>Nota:</strong> Use o Chrome ou Edge para melhor compatibilidade com Web Serial API</p>
+        </div>
     </header>
 
     <div class="container">
         <!-- Área de Monitoramento -->
         <section class="monitoring">
             <h2>Monitoramento em Tempo Real</h2>
+            
+            <!-- Console de dados recebidos -->
+            <div class="data-console">
+                <h4>📡 Dados Recebidos do ESP32:</h4>
+                <div id="dataConsole">Aguardando conexão...</div>
+            </div>
+            
             <div class="sensors-grid">
                 <!-- Termômetro RGB -->
                 <div class="thermometer-container">
@@ -398,7 +467,7 @@
                     <li><strong>Sensor RGB (TCS34725):</strong> Identifica variações na coloração da água, onde tons vermelhos intensos indicam possível contaminação</li>
                 </ul>
                 
-                <p>O ESP32 atua como o cérebro do sistema, coletando dados de todos os sensores e transmitindo as informações via Bluetooth integrado diretamente para este site. A interface web exibe os dados em tempo real, permitindo monitoramento instantâneo e análise contínua da qualidade da água.</p>
+                <p>O ESP32 atua como o cérebro do sistema, coletando dados de todos os sensores e transmitindo as informações via comunicação serial diretamente para este site. A interface web exibe os dados em tempo real, permitindo monitoramento instantâneo e análise contínua da qualidade da água.</p>
                 
                 <p><strong>Pinagem dos sensores:</strong></p>
                 <ul>
@@ -413,7 +482,7 @@
                 
                 <p><strong>Materiais utilizados:</strong></p>
                 <ul>
-                    <li>ESP32 (com Bluetooth integrado, dispensando módulo HC-05)</li>
+                    <li>ESP32 (com comunicação serial USB)</li>
                     <li>Sensor de pH digital</li>
                     <li>Sensor de condutividade</li>
                     <li>Sensor RGB TCS34725</li>
@@ -428,7 +497,7 @@
                     <li>2. Montagem física dos componentes na protoboard</li>
                     <li>3. Conexão e teste individual de cada sensor</li>
                     <li>4. Programação do ESP32 com algoritmos de leitura e transmissão</li>
-                    <li>5. Desenvolvimento da interface web com integração Bluetooth</li>
+                    <li>5. Desenvolvimento da interface web com integração serial</li>
                     <li>6. Testes extensivos e calibração dos sensores</li>
                     <li>7. Ajustes finais e otimização do sistema</li>
                 </ul>
@@ -465,9 +534,10 @@
     </footer>
 
     <script>
-        // Configurações BLE
+        // Elementos do DOM
         const connectBtn = document.getElementById('connectBtn');
         const connectionStatus = document.getElementById('connectionStatus');
+        const dataConsole = document.getElementById('dataConsole');
         const rgbStatus = document.getElementById('rgbStatus');
         const contaminationLevel = document.getElementById('contaminationLevel');
         const thermometerFill = document.getElementById('thermometerFill');
@@ -475,122 +545,231 @@
         const ldrValue = document.getElementById('ldrValue');
         const ldrFill = document.getElementById('ldrFill');
 
-        let device;
-        let characteristic;
+        // Variáveis de controle
+        let port;
+        let reader;
+        let writer;
         let isConnected = false;
 
-        connectBtn.addEventListener('click', conectarBLE);
+        // Event listener para botão de conexão
+        connectBtn.addEventListener('click', toggleConnection);
 
-        async function conectarBLE() {
-            try {
-                connectionStatus.textContent = 'Conectando...';
-                connectionStatus.className = 'status disconnected';
-                connectBtn.disabled = true;
-
-                device = await navigator.bluetooth.requestDevice({
-                    filters: [{
-                        services: ['0000ffe0-0000-1000-8000-00805f9b34fb'] // Exemplo de UUID de serviço para ESP32
-                    }]
-                });
-
-                const server = await device.gatt.connect();
-                const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
-                characteristic = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb'); // Exemplo de UUID de característica
-
-                characteristic.addEventListener('characteristicvaluechanged', receberDados);
-                await characteristic.startNotifications();
-
-                isConnected = true;
-                connectionStatus.textContent = 'Conectado';
-                connectionStatus.className = 'status connected pulse';
-                connectBtn.textContent = 'Desconectar';
-                connectBtn.removeEventListener('click', conectarBLE);
-                connectBtn.addEventListener('click', desconectarBLE);
-
-                console.log('Conectado ao dispositivo Bluetooth:', device.name);
-
-            } catch (error) {
-                console.error('Erro ao conectar ao Bluetooth:', error);
-                connectionStatus.textContent = 'Falha na conexão';
-                connectionStatus.className = 'status disconnected';
-                connectBtn.disabled = false;
-                connectBtn.textContent = 'Conectar ao Bio-Guard via Bluetooth';
-                isConnected = false;
+        // Função principal de conexão/desconexão
+        async function toggleConnection() {
+            if (isConnected) {
+                await desconectar();
+            } else {
+                await conectar();
             }
         }
 
-        async function desconectarBLE() {
-            if (device && device.gatt.connected) {
-                await device.gatt.disconnect();
+        // Função para conectar via Serial
+        async function conectar() {
+            try {
+                // Verificar se Web Serial API está disponível
+                if (!('serial' in navigator)) {
+                    throw new Error('Web Serial API não é suportada neste navegador');
+                }
+
+                connectionStatus.textContent = 'Conectando...';
+                connectionStatus.className = 'status connecting pulse';
+                connectBtn.disabled = true;
+
+                // Solicitar acesso à porta serial
+                port = await navigator.serial.requestPort();
+                
+                // Configurar a porta serial
+                await port.open({ 
+                    baudRate: 115200,
+                    databits: 8,
+                    stopbits: 1,
+                    parity: 'none',
+                    flowControl: 'none'
+                });
+
+                // Configurar reader e writer
+                const textDecoder = new TextDecoderStream();
+                const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+                reader = textDecoder.readable.getReader();
+
+                const textEncoder = new TextEncoderStream();
+                const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
+                writer = textEncoder.writable.getWriter();
+
+                // Conexão estabelecida
+                isConnected = true;
+                connectionStatus.textContent = 'Conectado via Serial';
+                connectionStatus.className = 'status connected pulse';
+                connectBtn.textContent = 'Desconectar';
+                connectBtn.disabled = false;
+
+                adicionarLog('✅ Conectado ao ESP32 via Serial');
+                adicionarLog('📡 Aguardando dados...');
+
+                // Iniciar leitura de dados
+                lerDados();
+
+            } catch (error) {
+                console.error('Erro ao conectar:', error);
+                connectionStatus.textContent = 'Falha na conexão';
+                connectionStatus.className = 'status disconnected';
+                connectBtn.textContent = 'Conectar ao ESP32 via Serial';
+                connectBtn.disabled = false;
+                
+                let errorMsg = 'Erro desconhecido';
+                if (error.message.includes('serial')) {
+                    errorMsg = 'Web Serial API não suportada';
+                } else if (error.message.includes('User cancelled')) {
+                    errorMsg = 'Conexão cancelada pelo usuário';
+                } else {
+                    errorMsg = error.message;
+                }
+                
+                adicionarLog(`❌ Erro: ${errorMsg}`);
+            }
+        }
+
+        // Função para desconectar
+        async function desconectar() {
+            try {
+                if (reader) {
+                    await reader.cancel();
+                    reader = null;
+                }
+                
+                if (writer) {
+                    await writer.close();
+                    writer = null;
+                }
+                
+                if (port) {
+                    await port.close();
+                    port = null;
+                }
+
                 isConnected = false;
                 connectionStatus.textContent = 'Desconectado';
                 connectionStatus.className = 'status disconnected';
-                connectBtn.textContent = 'Conectar ao Bio-Guard via Bluetooth';
+                connectBtn.textContent = 'Conectar ao ESP32 via Serial';
                 connectBtn.disabled = false;
-                connectBtn.removeEventListener('click', desconectarBLE);
-                connectBtn.addEventListener('click', conectarBLE);
-                console.log('Desconectado do dispositivo Bluetooth.');
+
+                adicionarLog('❌ Desconectado do ESP32');
+
+            } catch (error) {
+                console.error('Erro ao desconectar:', error);
+                adicionarLog(`❌ Erro ao desconectar: ${error.message}`);
             }
         }
 
-        function receberDados(event) {
-            const value = new TextDecoder().decode(event.target.value);
-            console.log('Dados recebidos:', value);
-
-            // Exemplo de formato de dados: "RGB: Vermelho Muito Escuro | Contaminação: Alta | LDR: 45%"
-            const parts = value.split(' | ');
-            let rgbClassification = 'Desconhecido';
-            let contaminationLevelText = 'N/A';
-            let ldrPercentage = 0;
-
-            parts.forEach(part => {
-                if (part.startsWith('RGB:')) {
-                    rgbClassification = part.replace('RGB: ', '').trim();
-                } else if (part.startsWith('Contaminação:')) {
-                    contaminationLevelText = part.replace('Contaminação: ', '').trim();
-                } else if (part.startsWith('LDR:')) {
-                    ldrPercentage = parseInt(part.replace('LDR: ', '').replace('%', '').trim());
+        // Função para ler dados continuamente
+        async function lerDados() {
+            try {
+                let buffer = '';
+                
+                while (isConnected && reader) {
+                    const { value, done } = await reader.read();
+                    
+                    if (done) {
+                        break;
+                    }
+                    
+                    buffer += value;
+                    
+                    // Processar linhas completas
+                    let lines = buffer.split('\n');
+                    buffer = lines.pop(); // Manter última linha incompleta no buffer
+                    
+                    for (let line of lines) {
+                        line = line.trim();
+                        if (line) {
+                            processarDados(line);
+                        }
+                    }
                 }
-            });
-
-            const contaminationValue = getContaminationLevel(contaminationLevelText);
-            const contaminationColor = getContaminationColor(contaminationLevelText);
-
-            atualizarTermometro(rgbClassification, `Nível: ${contaminationLevelText}`, contaminationValue, contaminationColor);
-            atualizarLDR(ldrPercentage);
+                
+            } catch (error) {
+                console.error('Erro na leitura:', error);
+                adicionarLog(`❌ Erro na leitura: ${error.message}`);
+                
+                if (isConnected) {
+                    await desconectar();
+                }
+            }
         }
 
-        /**
-         * Função para atualizar o termômetro RGB
-         */
-        function atualizarTermometro(classification, level, percentage, color) {
-            rgbStatus.textContent = classification;
-            rgbStatus.style.backgroundColor = color;
-            rgbStatus.style.color = getTextColor(color);
+        // Função para processar dados recebidos
+        function processarDados(dados) {
+            // Adicionar ao console
+            adicionarLog(`📨 ${dados}`);
             
-            contaminationLevel.textContent = level;
+            // Tentar extrair informações dos sensores
+            // Formato esperado: "RGB: Vermelho Muito Escuro | Contaminação: Alta | LDR: 45%"
+            if (dados.includes('RGB:') && dados.includes('LDR:')) {
+                const parts = dados.split(' | ');
+                let rgbClassification = 'Desconhecido';
+                let contaminationLevelText = 'N/A';
+                let ldrPercentage = 0;
+
+                parts.forEach(part => {
+                    if (part.includes('RGB:')) {
+                        rgbClassification = part.replace('RGB:', '').trim();
+                    } else if (part.includes('Contaminação:')) {
+                        contaminationLevelText = part.replace('Contaminação:', '').trim();
+                    } else if (part.includes('LDR:')) {
+                        ldrPercentage = parseInt(part.replace('LDR:', '').replace('%', '').trim()) || 0;
+                    }
+                });
+
+                // Atualizar interface
+                atualizarSensores(rgbClassification, contaminationLevelText, ldrPercentage);
+            }
             
-            thermometerFill.style.height = `${percentage}%`;
-            thermometerFill.style.backgroundColor = color;
-            thermometerBulb.style.backgroundColor = color;
+            // Detectar mensagens de conexão do ESP32
+            if (dados.includes('DISPOSITIVO BLUETOOTH CONECTADO') || dados.includes('CONECTADO')) {
+                adicionarLog('🎉 ESP32 reporta: Dispositivo conectado!');
+            }
         }
 
-        /**
-         * Função para atualizar o medidor LDR
-         */
-        function atualizarLDR(percentage) {
-            ldrValue.textContent = `${percentage}%`;
-            ldrFill.style.width = `${percentage}%`;
+        // Função para atualizar sensores na interface
+        function atualizarSensores(rgbClass, contamination, ldr) {
+            const contaminationValue = getContaminationLevel(contamination);
+            const contaminationColor = getContaminationColor(contamination);
+
+            // Atualizar termômetro RGB
+            rgbStatus.textContent = rgbClass;
+            rgbStatus.style.backgroundColor = contaminationColor;
+            rgbStatus.style.color = getTextColor(contaminationColor);
             
-            // Ajustar intensidade da cor baseada na porcentagem
-            const intensity = percentage / 100;
+            contaminationLevel.textContent = `Nível: ${contamination}`;
+            
+            thermometerFill.style.height = `${contaminationValue}%`;
+            thermometerFill.style.backgroundColor = contaminationColor;
+            thermometerBulb.style.backgroundColor = contaminationColor;
+
+            // Atualizar LDR
+            ldrValue.textContent = `${ldr}%`;
+            ldrFill.style.width = `${ldr}%`;
+            
+            const intensity = ldr / 100;
             const color = `rgba(255, 215, 0, ${0.3 + intensity * 0.7})`;
             ldrFill.style.backgroundColor = color;
         }
 
-        /**
-         * Função auxiliar para obter nível de contaminação em porcentagem
-         */
+        // Função para adicionar log ao console
+        function adicionarLog(mensagem) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${mensagem}`;
+            
+            dataConsole.innerHTML = logEntry + '<br>' + dataConsole.innerHTML;
+            
+            // Manter apenas as últimas 10 mensagens
+            const lines = dataConsole.innerHTML.split('<br>');
+            if (lines.length > 10) {
+                dataConsole.innerHTML = lines.slice(0, 10).join('<br>');
+            }
+        }
+
+        // Funções auxiliares para cores e níveis
         function getContaminationLevel(level) {
             switch(level.toLowerCase()) {
                 case 'alta': return 85;
@@ -600,9 +779,6 @@
             }
         }
 
-        /**
-         * Função auxiliar para obter cor baseada no nível de contaminação
-         */
         function getContaminationColor(level) {
             switch(level.toLowerCase()) {
                 case 'alta': return '#B30000';
@@ -612,51 +788,4 @@
             }
         }
 
-        /**
-         * Função auxiliar para determinar cor do texto baseada no fundo
-         */
-        function getTextColor(backgroundColor) {
-            return backgroundColor === '#FFD700' ? '#333' : 'white';
-        }
-
-        // Verificar disponibilidade do Web Bluetooth ao carregar a página
-        window.addEventListener('load', () => {
-            if (!navigator.bluetooth) {
-                connectBtn.disabled = true;
-                connectBtn.textContent = 'Web Bluetooth não disponível';
-                connectionStatus.textContent = 'Navegador incompatível';
-                console.warn('Web Bluetooth não está disponível neste navegador');
-            }
-        });
-
-        // Simulação de dados para demonstração (remover em produção)
-        /*
-        function simularDados() {
-            if (!isConnected) {
-                const tipos = ['Vermelho Muito Escuro', 'Vermelho Normal', 'Vermelho Muito Claro'];
-                const niveis = ['Alta', 'Media', 'Baixa'];
-                
-                const tipoIndex = Math.floor(Math.random() * 3);
-                const ldrRandom = Math.floor(Math.random() * 100);
-                
-                const dataSimulada = `RGB: ${tipos[tipoIndex]} | Contaminação: ${niveis[tipoIndex]} | LDR: ${ldrRandom}%`;
-                
-                console.log('Simulação:', dataSimulada);
-                
-                const mockEvent = {
-                    target: {
-                        value: new TextEncoder().encode(dataSimulada)
-                    }
-                };
-                
-                receberDados(mockEvent);
-            }
-        }
-        
-        // Executar simulação a cada 3 segundos (apenas para demonstração)
-        setInterval(simularDados, 3000);
-        */
-    </script>
-</body>
-</html>
-
+        function getTextColor(backgroundColor
