@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bio-Guard - Projeto Feira de Ciências 2025</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #3BB4E6 0%, #2A9FD6 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Animações */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 60px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .header h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 1.4rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 40px;
+            font-weight: 300;
+        }
+
+        .connect-btn {
+            background: #1E5A8A;
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .connect-btn:hover {
+            background: #164A73;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .connect-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 12px 25px;
+            border-radius: 25px;
+            display: inline-block;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .status.connected {
+            background: rgba(46, 204, 113, 0.2);
+            color: #27AE60;
+            border: 2px solid #27AE60;
+        }
+
+        .status.disconnected {
+            background: rgba(231, 76, 60, 0.2);
+            color: #E74C3C;
+            border: 2px solid #E74C3C;
+        }
+
+        /* Container Principal */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Área de Monitoramento */
+        .monitoring {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            animation: fadeInUp 1s ease-out 0.2s both;
+        }
+
+        .monitoring h2 {
+            text-align: center;
+            color: #1E5A8A;
+            font-size: 2.2rem;
+            margin-bottom: 40px;
+            font-weight: 600;
+        }
+
+        .sensors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            align-items: center;
+        }
+
+        /* Termômetro RGB */
+        .thermometer-container {
+            text-align: center;
+        }
+
+        .thermometer {
+            position: relative;
+            width: 60px;
+            height: 300px;
+            background: #f0f0f0;
+            border-radius: 30px;
+            margin: 0 auto 20px;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .thermometer-fill {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            border-radius: 0 0 30px 30px;
+            transition: all 1s ease;
+            height: 0%;
+        }
+
+        .thermometer-bulb {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            transition: all 1s ease;
+        }
+
+        .rgb-info {
+            margin-top: 20px;
+        }
+
+        .rgb-info h3 {
+            color: #1E5A8A;
+            margin-bottom: 10px;
+            font-size: 1.4rem;
+        }
+
+        .rgb-status {
+            padding: 12px 20px;
+            border-radius: 15px;
+            font-weight: 500;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        /* Medidor LDR */
+        .ldr-container {
+            text-align: center;
+        }
+
+        .ldr-gauge {
+            position: relative;
+            width: 200px;
+            height: 100px;
+            margin: 0 auto 20px;
+            background: linear-gradient(90deg, #FFD700 0%, #FFF8DC 100%);
+            border-radius: 100px 100px 0 0;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .ldr-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #FFD700 0%, #FFFFFF 100%);
+            border-radius: 100px 100px 0 0;
+            transition: all 1s ease;
+            width: 0%;
+        }
+
+        .ldr-info h3 {
+            color: #1E5A8A;
+            margin-bottom: 10px;
+            font-size: 1.4rem;
+        }
+
+        .ldr-value {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #F39C12;
+        }
+
+        /* Seções do Projeto */
+        .project-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 40px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            animation: fadeInUp 1s ease-out 0.4s both;
+        }
+
+        .project-section h2 {
+            color: #1E5A8A;
+            font-size: 2rem;
+            margin-bottom: 25px;
+            font-weight: 600;
+            border-bottom: 3px solid #3BB4E6;
+            padding-bottom: 10px;
+        }
+
+        .person-block {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(59, 180, 230, 0.05);
+            border-radius: 15px;
+            border-left: 5px solid #3BB4E6;
+        }
+
+        .person-block h3 {
+            color: #1E5A8A;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .person-block p {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .person-block ul {
+            margin: 15px 0 15px 25px;
+            color: #555;
+        }
+
+        .person-block li {
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .highlight {
+            background: rgba(59, 180, 230, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #3BB4E6;
+            font-style: italic;
+        }
+
+        /* Rodapé */
+        .footer {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: white;
+            text-align: center;
+            padding: 30px 20px;
+            margin-top: 60px;
+            font-size: 1.1rem;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .header p {
+                font-size: 1.2rem;
+            }
+            
+            .sensors-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .monitoring, .project-section {
+                padding: 25px;
+                margin: 20px auto;
+            }
+            
+            .person-block {
+                padding: 20px;
+            }
+        }
+
+        /* Efeitos visuais */
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <!-- Cabeçalho -->
+    <header class="header">
+        <h1>Bio-Guard</h1>
+        <p>Projeto da Feira de Ciências 2025</p>
+        <button class="connect-btn" id="connectBtn">Conectar ao Bio-Guard via Bluetooth</button>
+        <div class="status disconnected" id="connectionStatus">Desconectado</div>
+    </header>
+
+    <div class="container">
+        <!-- Área de Monitoramento -->
+        <section class="monitoring">
+            <h2>Monitoramento em Tempo Real</h2>
+            <div class="sensors-grid">
+                <!-- Termômetro RGB -->
+                <div class="thermometer-container">
+                    <div class="thermometer">
+                        <div class="thermometer-fill" id="thermometerFill"></div>
+                        <div class="thermometer-bulb" id="thermometerBulb"></div>
+                    </div>
+                    <div class="rgb-info">
+                        <h3>Sensor RGB</h3>
+                        <div class="rgb-status" id="rgbStatus">Aguardando conexão...</div>
+                        <div id="contaminationLevel">Nível: -</div>
+                    </div>
+                </div>
+
+                <!-- Medidor LDR -->
+                <div class="ldr-container">
+                    <div class="ldr-gauge">
+                        <div class="ldr-fill" id="ldrFill"></div>
+                    </div>
+                    <div class="ldr-info">
+                        <h3>Sensor LDR</h3>
+                        <div>Intensidade de Luz: <span class="ldr-value" id="ldrValue">0%</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Informações do Projeto -->
+        <section class="project-section">
+            <h2>Sobre o Projeto Bio-Guard</h2>
+            
+            <div class="person-block">
+                <h3>Introdução e Justificativa</h3>
+                <p>O Bio-Guard é um sistema portátil e inovador desenvolvido para monitorar a qualidade da água em tempo real, utilizando sensores avançados conectados a um microcontrolador ESP32. Nossa solução integra sensores de pH, condutividade e RGB para oferecer uma análise completa e acessível da qualidade hídrica.</p>
+                
+                <p>A escolha deste projeto surge da crescente preocupação com a poluição hídrica no Brasil e da necessidade urgente de soluções tecnológicas acessíveis para monitoramento ambiental. A água limpa é um recurso essencial para a saúde humana, agricultura sustentável e preservação do meio ambiente.</p>
+                
+                <div class="highlight">
+                    <strong>Dados de apoio:</strong> Segundo a ONU, 40% da população mundial enfrenta escassez de água potável, e no Brasil, rios urbanos apresentam níveis críticos de poluição, tornando projetos como o Bio-Guard fundamentais para o futuro sustentável.
+                </div>
+            </div>
+
+            <div class="person-block">
+                <h3>Funcionamento Tecnológico</h3>
+                <p>O sistema Bio-Guard opera através da integração de múltiplos sensores especializados:</p>
+                
+                <ul>
+                    <li><strong>Sensor de pH:</strong> Mede a acidez ou alcalinidade da água, indicando desequilíbrios químicos</li>
+                    <li><strong>Sensor de condutividade:</strong> Detecta a concentração de sais e poluentes dissolvidos na água</li>
+                    <li><strong>Sensor RGB (TCS34725):</strong> Identifica variações na coloração da água, onde tons vermelhos intensos indicam possível contaminação</li>
+                </ul>
+                
+                <p>O ESP32 atua como o cérebro do sistema, coletando dados de todos os sensores e transmitindo as informações via Bluetooth integrado diretamente para este site. A interface web exibe os dados em tempo real, permitindo monitoramento instantâneo e análise contínua da qualidade da água.</p>
+                
+                <p><strong>Pinagem dos sensores:</strong></p>
+                <ul>
+                    <li>Sensor RGB TCS34725: SDA (pino 21), SCL (pino 22), VCC (3V3), GND</li>
+                    <li>Sensor LDR: VCC (3V3), GND, DO (pino 34 analógico)</li>
+                </ul>
+            </div>
+
+            <div class="person-block">
+                <h3>Construção e Materiais</h3>
+                <p>O desenvolvimento do Bio-Guard envolveu a seleção criteriosa de componentes e uma metodologia estruturada de montagem:</p>
+                
+                <p><strong>Materiais utilizados:</strong></p>
+                <ul>
+                    <li>ESP32 (com Bluetooth integrado, dispensando módulo HC-05)</li>
+                    <li>Sensor de pH digital</li>
+                    <li>Sensor de condutividade</li>
+                    <li>Sensor RGB TCS34725</li>
+                    <li>Sensor LDR (Light Dependent Resistor)</li>
+                    <li>Jumpers, protoboard, LEDs indicadores, resistores</li>
+                    <li>Fonte de alimentação USB ou bateria recarregável</li>
+                </ul>
+                
+                <p><strong>Etapas de construção:</strong></p>
+                <ul>
+                    <li>1. Planejamento e design do circuito eletrônico</li>
+                    <li>2. Montagem física dos componentes na protoboard</li>
+                    <li>3. Conexão e teste individual de cada sensor</li>
+                    <li>4. Programação do ESP32 com algoritmos de leitura e transmissão</li>
+                    <li>5. Desenvolvimento da interface web com integração Bluetooth</li>
+                    <li>6. Testes extensivos e calibração dos sensores</li>
+                    <li>7. Ajustes finais e otimização do sistema</li>
+                </ul>
+            </div>
+
+            <div class="person-block">
+                <h3>Aplicações e Conclusão</h3>
+                <p>O Bio-Guard possui um amplo espectro de aplicações práticas que podem beneficiar diversos setores da sociedade:</p>
+                
+                <ul>
+                    <li><strong>Monitoramento ambiental:</strong> Rios, lagos, nascentes e reservatórios</li>
+                    <li><strong>Controle de qualidade:</strong> Água potável residencial e comercial</li>
+                    <li><strong>Educação:</strong> Ferramenta pedagógica em escolas e universidades</li>
+                    <li><strong>Agricultura:</strong> Análise de água para irrigação</li>
+                    <li><strong>Pesquisa:</strong> Estudos de impacto ambiental e poluição hídrica</li>
+                </ul>
+                
+                <p><strong>Principais vantagens:</strong> Baixo custo de implementação, portabilidade, dados em tempo real, interface intuitiva, potencial educativo elevado e contribuição para a consciência ambiental.</p>
+                
+                <p>Este projeto representou uma jornada de aprendizado extraordinária para nossa equipe. Desenvolvemos competências em trabalho colaborativo, programação de microcontroladores, eletrônica aplicada, análise de dados e comunicação científica. Os desafios enfrentados nos tornaram mais resilientes e criativos na busca por soluções.</p>
+                
+                <p><strong>Próximos passos:</strong> Pretendemos desenvolver uma versão à prova d'água para uso em campo, implementar alimentação por energia solar e expandir o conjunto de sensores para análises ainda mais completas.</p>
+                
+                <div class="highlight">
+                    <strong>"Com o Bio-Guard, a ciência trabalha em defesa da água limpa e da vida."</strong>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Rodapé -->
+    <footer class="footer">
+        <p>2° ano AGR - Escola Estadual João XXIII - Barra de São Francisco - ES - 2025</p>
+    </footer>
+
+    <script>
+        // Configurações BLE
+        const connectBtn = document.getElementById('connectBtn');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const rgbStatus = document.getElementById('rgbStatus');
+        const contaminationLevel = document.getElementById('contaminationLevel');
+        const thermometerFill = document.getElementById('thermometerFill');
+        const thermometerBulb = document.getElementById('thermometerBulb');
+        const ldrValue = document.getElementById('ldrValue');
+        const ldrFill = document.getElementById('ldrFill');
+
+        let device;
+        let characteristic;
+        let isConnected = false;
+
+        connectBtn.addEventListener('click', conectarBLE);
+
+        async function conectarBLE() {
+            try {
+                connectionStatus.textContent = 'Conectando...';
+                connectionStatus.className = 'status disconnected';
+                connectBtn.disabled = true;
+
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{
+                        services: ['0000ffe0-0000-1000-8000-00805f9b34fb'] // Exemplo de UUID de serviço para ESP32
+                    }]
+                });
+
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
+                characteristic = await service.getCharacteristic('0000ffe1-0000-1000-8000-00805f9b34fb'); // Exemplo de UUID de característica
+
+                characteristic.addEventListener('characteristicvaluechanged', receberDados);
+                await characteristic.startNotifications();
+
+                isConnected = true;
+                connectionStatus.textContent = 'Conectado';
+                connectionStatus.className = 'status connected pulse';
+                connectBtn.textContent = 'Desconectar';
+                connectBtn.removeEventListener('click', conectarBLE);
+                connectBtn.addEventListener('click', desconectarBLE);
+
+                console.log('Conectado ao dispositivo Bluetooth:', device.name);
+
+            } catch (error) {
+                console.error('Erro ao conectar ao Bluetooth:', error);
+                connectionStatus.textContent = 'Falha na conexão';
+                connectionStatus.className = 'status disconnected';
+                connectBtn.disabled = false;
+                connectBtn.textContent = 'Conectar ao Bio-Guard via Bluetooth';
+                isConnected = false;
+            }
+        }
+
+        async function desconectarBLE() {
+            if (device && device.gatt.connected) {
+                await device.gatt.disconnect();
+                isConnected = false;
+                connectionStatus.textContent = 'Desconectado';
+                connectionStatus.className = 'status disconnected';
+                connectBtn.textContent = 'Conectar ao Bio-Guard via Bluetooth';
+                connectBtn.disabled = false;
+                connectBtn.removeEventListener('click', desconectarBLE);
+                connectBtn.addEventListener('click', conectarBLE);
+                console.log('Desconectado do dispositivo Bluetooth.');
+            }
+        }
+
+        function receberDados(event) {
+            const value = new TextDecoder().decode(event.target.value);
+            console.log('Dados recebidos:', value);
+
+            // Exemplo de formato de dados: "RGB: Vermelho Muito Escuro | Contaminação: Alta | LDR: 45%"
+            const parts = value.split(' | ');
+            let rgbClassification = 'Desconhecido';
+            let contaminationLevelText = 'N/A';
+            let ldrPercentage = 0;
+
+            parts.forEach(part => {
+                if (part.startsWith('RGB:')) {
+                    rgbClassification = part.replace('RGB: ', '').trim();
+                } else if (part.startsWith('Contaminação:')) {
+                    contaminationLevelText = part.replace('Contaminação: ', '').trim();
+                } else if (part.startsWith('LDR:')) {
+                    ldrPercentage = parseInt(part.replace('LDR: ', '').replace('%', '').trim());
+                }
+            });
+
+            const contaminationValue = getContaminationLevel(contaminationLevelText);
+            const contaminationColor = getContaminationColor(contaminationLevelText);
+
+            atualizarTermometro(rgbClassification, `Nível: ${contaminationLevelText}`, contaminationValue, contaminationColor);
+            atualizarLDR(ldrPercentage);
+        }
+
+        /**
+         * Função para atualizar o termômetro RGB
+         */
+        function atualizarTermometro(classification, level, percentage, color) {
+            rgbStatus.textContent = classification;
+            rgbStatus.style.backgroundColor = color;
+            rgbStatus.style.color = getTextColor(color);
+            
+            contaminationLevel.textContent = level;
+            
+            thermometerFill.style.height = `${percentage}%`;
+            thermometerFill.style.backgroundColor = color;
+            thermometerBulb.style.backgroundColor = color;
+        }
+
+        /**
+         * Função para atualizar o medidor LDR
+         */
+        function atualizarLDR(percentage) {
+            ldrValue.textContent = `${percentage}%`;
+            ldrFill.style.width = `${percentage}%`;
+            
+            // Ajustar intensidade da cor baseada na porcentagem
+            const intensity = percentage / 100;
+            const color = `rgba(255, 215, 0, ${0.3 + intensity * 0.7})`;
+            ldrFill.style.backgroundColor = color;
+        }
+
+        /**
+         * Função auxiliar para obter nível de contaminação em porcentagem
+         */
+        function getContaminationLevel(level) {
+            switch(level.toLowerCase()) {
+                case 'alta': return 85;
+                case 'media': case 'média': return 50;
+                case 'baixa': return 20;
+                default: return 0;
+            }
+        }
+
+        /**
+         * Função auxiliar para obter cor baseada no nível de contaminação
+         */
+        function getContaminationColor(level) {
+            switch(level.toLowerCase()) {
+                case 'alta': return '#B30000';
+                case 'media': case 'média': return '#FF6600';
+                case 'baixa': return '#FFD700';
+                default: return '#cccccc';
+            }
+        }
+
+        /**
+         * Função auxiliar para determinar cor do texto baseada no fundo
+         */
+        function getTextColor(backgroundColor) {
+            return backgroundColor === '#FFD700' ? '#333' : 'white';
+        }
+
+        // Verificar disponibilidade do Web Bluetooth ao carregar a página
+        window.addEventListener('load', () => {
+            if (!navigator.bluetooth) {
+                connectBtn.disabled = true;
+                connectBtn.textContent = 'Web Bluetooth não disponível';
+                connectionStatus.textContent = 'Navegador incompatível';
+                console.warn('Web Bluetooth não está disponível neste navegador');
+            }
+        });
+
+        // Simulação de dados para demonstração (remover em produção)
+        /*
+        function simularDados() {
+            if (!isConnected) {
+                const tipos = ['Vermelho Muito Escuro', 'Vermelho Normal', 'Vermelho Muito Claro'];
+                const niveis = ['Alta', 'Media', 'Baixa'];
+                
+                const tipoIndex = Math.floor(Math.random() * 3);
+                const ldrRandom = Math.floor(Math.random() * 100);
+                
+                const dataSimulada = `RGB: ${tipos[tipoIndex]} | Contaminação: ${niveis[tipoIndex]} | LDR: ${ldrRandom}%`;
+                
+                console.log('Simulação:', dataSimulada);
+                
+                const mockEvent = {
+                    target: {
+                        value: new TextEncoder().encode(dataSimulada)
+                    }
+                };
+                
+                receberDados(mockEvent);
+            }
+        }
+        
+        // Executar simulação a cada 3 segundos (apenas para demonstração)
+        setInterval(simularDados, 3000);
+        */
+    </script>
+</body>
+</html>
+
